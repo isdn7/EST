@@ -69,11 +69,27 @@ def display_survey():
     
     st.progress((section_index + 1) / len(section_list), text=f"{section_index + 1}/{len(section_list)} 단계 진행 중")
     
+    # --- 2. 응답 옵션 설명 문구 추가 ---
+    # 각 숫자에 해당하는 설명 문구를 딕셔너리로 정의
+    options_map = {
+        1: "1(전혀 아니다)",
+        2: "2(아니다)",
+        3: "3(보통이다)",
+        4: "4(그렇다)",
+        5: "5(매우 그렇다)"
+    }
+    
     with st.form(key=f"form_{version}_{section_index}"):
         st.header(f"섹션 {section_index + 1}: {current_section_name}")
         for _, row in questions_df.iterrows():
             st.markdown(f"**{row['번호']}. {row['수정내용']}**")
-            st.radio("선택", [1, 2, 3, 4, 5], key=f"q_{row['번호']}", horizontal=True, label_visibility="collapsed")
+            # format_func를 이용해 숫자 대신 설명 문구를 버튼에 표시
+            st.radio("선택", 
+                     options=[1, 2, 3, 4, 5], 
+                     key=f"q_{row['번호']}", 
+                     format_func=lambda x: options_map[x],
+                     horizontal=True, 
+                     label_visibility="collapsed")
         
         button_label = "결과 분석하기" if (section_index == len(section_list) - 1) else "다음 섹션으로"
         if st.form_submit_button(button_label):
@@ -85,7 +101,6 @@ def display_survey():
 def display_results():
     import plotly.express as px
     with st.spinner('결과를 분석하는 중입니다...'):
-        # --- 1. 과목별 총 문항 수 계산 ---
         question_counts = {subject: 0 for subject in SUBJECT_ORDER}
         for _, row in df.iterrows():
             for i in range(1, 4):
@@ -95,18 +110,15 @@ def display_results():
                     if subject in question_counts:
                         question_counts[subject] += 1
         
-        # --- 2. 합산 점수 계산 ---
         total_scores = {subject: 0 for subject in SUBJECT_ORDER}
         df_results = df.astype({'번호': str})
         for q_id, answer in st.session_state.responses.items():
             q_data_rows = df_results.loc[df_results['번호'] == q_id]
             if q_data_rows.empty: continue
             q_data = q_data_rows.iloc[0]
-
             for i in range(1, 4):
                 subject_col = f'관련교과군{i}' if i > 1 else '관련교과군'
                 scale_col = f'척도{i}' if i > 1 else '척도'
-
                 if subject_col in q_data and pd.notna(q_data[subject_col]):
                     subject = q_data[subject_col]
                     scale = q_data[scale_col]
@@ -114,13 +126,11 @@ def display_results():
                     if subject in total_scores:
                         total_scores[subject] += score
 
-        # --- 3. 정규화 점수(평균 점수) 계산 ---
         normalized_scores = {}
         for subject, total_score in total_scores.items():
             if question_counts.get(subject, 0) > 0:
                 normalized_scores[subject] = total_score / question_counts[subject]
         
-        # 정규화된 점수를 기준으로 정렬
         sorted_scores = sorted(normalized_scores.items(), key=lambda item: item[1], reverse=True)
 
     st.balloons()
@@ -136,12 +146,18 @@ def display_results():
         scores_series = pd.Series(normalized_scores).reindex(SUBJECT_ORDER).fillna(0)
         chart_df = scores_series.reset_index()
         chart_df.columns = ['과목', '평균 점수']
-
         fig = px.bar(chart_df, x='과목', y='평균 점수', text_auto='.2f')
         fig.update_xaxes(tickangle=0)
         st.plotly_chart(fig, use_container_width=True)
     else:
         st.warning("분석 결과가 없습니다.")
+
+    st.write("---")
+    # --- 1. 결과 페이지 안내 문구 추가 ---
+    st.info("""
+    이 검사는 개인의 흥미 유형을 알아보기 위한 간단한 검사이며, 결과는 참고용으로만 활용하시기 바랍니다. 
+    검사자의 태도나 상황에 따라 정확도가 달라질 수 있으므로, 실제 교육과정 선택 시에는 다양한 요소를 함께 고려하시길 권장합니다.
+    """)
 
     if st.button("검사 다시하기"):
         st.session_state.clear()

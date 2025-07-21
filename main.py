@@ -3,9 +3,26 @@ import pandas as pd
 import plotly.express as px
 
 # 페이지 기본 설정
-st.set_page_config(page_title="과목 유형 검사", page_icon="📚", layout="centered")
+st.set_page_config(page_title="과목 유형 검사", page_icon="📚", layout="wide") # wide layout으로 변경하여 안정성 확보
 
-# @st.cache_data -> st.cache_data는 Streamlit의 메인 스레드에서만 호출 가능하여 함수 밖으로 이동
+# --- 1. 최종 수정: 스트림릿 컨테이너에 직접 스타일 적용 ---
+st.markdown(
+    """
+    <style>
+    /* 스트림릿의 헤더와 툴바가 들어가는 상단 부분을 찾아서 그 아래에 고정 */
+    header[data-testid="stHeader"] {
+        position: sticky;
+        top: 0;
+        z-index: 999;
+    }
+    .st-emotion-cache-18ni7ap { /* 스트림릿의 메인 콘텐츠 컨테이너 */
+        padding-top: 2rem; /* 전광판이 들어갈 공간 확보 */
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 @st.cache_data
 def load_data(file_path):
     """CSV 파일을 로드하고 데이터를 정리하는 함수"""
@@ -28,18 +45,10 @@ def load_data(file_path):
         return None
 
 # --- UI 시작 ---
-st.title("📚 SETI 선택과목 유형검사")
 
-# 버전 선택 UI
-version = st.radio(
-    "**원하는 검사 버전을 선택해주세요.**",
-    ('**라이트** (81문항)', '**기본** (115문항)'),
-    index=None,
-    horizontal=True
-)
-
-# --- 상단 고정 전광판 (수정됨) ---
-if version:
+# --- 2. 최종 수정: 전광판 코드를 컨테이너에 삽입 ---
+# st.container를 사용하여 전광판을 독립된 섹션으로 만듦
+with st.container():
     try:
         advice_df = pd.read_csv('advice_data.csv', header=None)
         advice_list = advice_df[0].dropna().tolist()
@@ -47,19 +56,21 @@ if version:
         
         marquee_speed_seconds = 240
 
+        # HTML과 CSS를 사용하여 전광판 효과 구현
         st.markdown(
             f"""
             <style>
             .marquee-container {{
-                position: sticky;  /* 'fixed' 대신 'sticky' 사용 */
-                top: 0;           /* 스크롤 시 상단에 고정 */
-                z-index: 999;
+                position: fixed;
+                top: 55px; /* 스트림릿 헤더 바로 아래에 위치 */
+                left: 0;
+                width: 100%;
+                z-index: 998;
                 background-color: #222222;
                 color: white;
                 padding: 10px 0;
                 overflow: hidden;
                 box-sizing: border-box;
-                width: 100%;
             }}
             .marquee-text {{
                 display: inline-block;
@@ -76,12 +87,23 @@ if version:
             <div class="marquee-container">
                 <div class="marquee-text">{marquee_content}</div>
             </div>
-            <div style="margin-top: 1rem;"></div>
             """,
             unsafe_allow_html=True
         )
     except Exception:
         pass
+
+
+st.title("📚 SETI 선택과목 유형검사")
+
+# 버전 선택 UI
+version = st.radio(
+    "**원하는 검사 버전을 선택해주세요.**",
+    ('**라이트** (81문항)', '**기본** (115문항)'),
+    index=None,
+    horizontal=True
+)
+
 
 # --- 이하 코드는 모두 동일합니다 ---
 if not version:

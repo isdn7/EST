@@ -6,11 +6,12 @@ import random
 # 페이지 기본 설정
 st.set_page_config(page_title="과목 유형 검사", page_icon="📚", layout="wide")
 
+# 상단 고정 전광판이 다른 콘텐츠를 가리지 않도록 전체 페이지에 여백 추가
 st.markdown(
     """
     <style>
-    .st-emotion-cache-18ni7ap {
-        padding-top: 6rem;
+    .st-emotion-cache-18ni7ap { /* 스트림릿의 메인 콘텐츠 컨테이너 */
+        padding-top: 6rem; /* 전광판이 들어갈 공간 확보 */
     }
     </style>
     """,
@@ -219,17 +220,26 @@ def display_results():
 
     if sorted_scores_dict:
         st.subheader("💡 나의 상위 선호 과목 (교과군별)")
+        
+        # --- 핵심 수정 부분 ---
+        # 1. 상위 8개 과목 이름 리스트 생성
+        top_8_subjects_list = list(sorted_scores_dict.keys())[:8]
+
+        # 2. 과목-교과군 매핑 정보 생성
         subject_to_group_map = df.drop_duplicates(subset=['관련교과군']).set_index('관련교과군')['카테고리'].to_dict()
+
+        # 3. 교과군 순서대로, 상위 8개에 포함된 과목만 필터링하여 표시
         for group_name in SECTION_ORDER:
-            group_subjects = [s for s in SUBJECT_ORDER if subject_to_group_map.get(s) == group_name and s in sorted_scores_dict]
-            group_subjects.sort(key=lambda s: sorted_scores_dict.get(s, 0), reverse=True)
+            # 현재 교과군에 속하면서, 상위 8개 리스트에 있는 과목만 필터링
+            group_subjects = [s for s in top_8_subjects_list if subject_to_group_map.get(s) == group_name]
+            
             if group_subjects:
                 st.markdown(f"**▌ {group_name}**")
                 cols = st.columns(len(group_subjects))
                 for i, subject in enumerate(group_subjects):
                     with cols[i]:
-                        score_val = sorted_scores_dict[subject]
-                        st.metric(label=subject, value=f"{score_val:.2f}점")
+                        st.metric(label=subject, value=f"{sorted_scores_dict[subject]:.2f}점")
+        # --- 수정 끝 ---
         
         st.subheader("과목별 선호도 점수 (평균 점수)")
         scores_series = pd.Series(normalized_scores).reindex(SUBJECT_ORDER).fillna(0)

@@ -1,8 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import time # 시간 제어를 위해 time 라이브러리 추가
-import random # 조언을 무작위로 보여주기 위해 random 라이브러리 추가
+from streamlit_marquee import streamlit_marquee # marquee 라이브러리 다시 사용
 
 # 페이지 기본 설정
 st.set_page_config(page_title="과목 유형 검사", page_icon="📚", layout="centered")
@@ -39,29 +38,24 @@ version = st.radio(
     horizontal=True
 )
 
-# --- 1. 전광판 기능 수정 (스트림릿 내장 기능 사용) ---
-if version: # 버전을 선택했을 때만 전광판 표시
+# --- 1. 속도 조절된 전광판 기능 (marquee 사용) ---
+if version:
     try:
         advice_df = pd.read_csv('advice_data.csv', header=None)
         advice_list = advice_df[0].dropna().tolist()
+        marquee_content = " ★★★ ".join(advice_list)
         
-        # st.session_state를 이용해 현재 보여줄 조언의 순서를 기억
-        if 'advice_idx' not in st.session_state:
-            st.session_state.advice_idx = 0
-
-        # st.empty()로 비어있는 공간을 만들고, 그 안에 조언을 표시
-        placeholder = st.empty()
-        with placeholder.container():
-            st.info(f"💡 선배들의 조언: {advice_list[st.session_state.advice_idx]}")
-        
-        # 보여줄 조언의 순서를 1 증가시킴 (리스트 길이를 넘어가면 다시 0으로)
-        st.session_state.advice_idx = (st.session_state.advice_idx + 1) % len(advice_list)
-
+        streamlit_marquee(
+            content=marquee_content,
+            velocity=40,  # 속도 조절 (숫자가 작을수록 느려짐)
+            loop=0,
+            background="#222222",
+            font_size="18px",
+        )
     except Exception:
-        pass # 조언 파일이 없어도 오류 없이 넘어감
+        pass
 
 st.write("---")
-
 
 if not version:
     st.info("👆 위에서 검사 버전을 선택해주세요.")
@@ -166,9 +160,9 @@ def display_results():
 
     if sorted_scores_dict:
         st.subheader("💡 나의 상위 선호 과목 (교과군별)")
-        subject_to_group_map = df.set_index('관련교과군')['카테고리'].to_dict()
+        subject_to_group_map = df.drop_duplicates(subset=['관련교과군']).set_index('관련교과군')['카테고리'].to_dict()
         for group_name in SECTION_ORDER:
-            group_subjects = [s for s, g in subject_to_group_map.items() if g == group_name and s in sorted_scores_dict]
+            group_subjects = [s for s in SUBJECT_ORDER if subject_to_group_map.get(s) == group_name and s in sorted_scores_dict]
             group_subjects.sort(key=lambda s: sorted_scores_dict.get(s, 0), reverse=True)
             if group_subjects:
                 st.markdown(f"**▌ {group_name}**")

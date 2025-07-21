@@ -5,6 +5,19 @@ import plotly.express as px
 # 페이지 기본 설정
 st.set_page_config(page_title="과목 유형 검사", page_icon="📚", layout="centered")
 
+# --- 1. 핵심 수정: 상단 고정 전광판이 다른 콘텐츠를 가리지 않도록 전체 페이지에 여백 추가 ---
+st.markdown(
+    """
+    <style>
+    .main .block-container {
+        padding-top: 60px; /* 상단 여백 추가 (전광판 높이만큼) */
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+
 @st.cache_data
 def load_data(file_path):
     """CSV 파일을 로드하고 데이터를 정리하는 함수"""
@@ -37,14 +50,13 @@ version = st.radio(
     horizontal=True
 )
 
-# --- 1. 속도 조절이 가능한 HTML/CSS 전광판 ---
+# --- 2. 핵심 수정: 전광판 CSS에 position: fixed 추가 ---
 if version:
     try:
         advice_df = pd.read_csv('advice_data.csv', header=None)
         advice_list = advice_df[0].dropna().tolist()
         marquee_content = " ★★★ ".join(advice_list)
         
-        # <<< 속도 조절: 이 숫자를 크게 할수록 느려집니다 (단위: 초) >>>
         marquee_speed_seconds = 240
 
         # HTML과 CSS를 사용하여 전광판 효과 구현
@@ -52,7 +64,11 @@ if version:
             f"""
             <style>
             .marquee-container {{
-                width: 100%;
+                position: fixed; /* 화면에 고정 */
+                top: 0;          /* 화면 맨 위 */
+                left: 0;         /* 왼쪽부터 */
+                width: 100%;     /* 전체 너비 */
+                z-index: 999;    /* 다른 요소들 위에 표시 */
                 background-color: #222222;
                 color: white;
                 padding: 10px 0;
@@ -80,7 +96,7 @@ if version:
     except Exception:
         pass
 
-st.write("---")
+# st.write("---") # 전광판 바로 아래 구분선은 고정되므로 제거하는 것이 자연스러움
 
 # --- 이하 코드는 모두 동일합니다 ---
 if not version:

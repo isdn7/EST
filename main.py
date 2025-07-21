@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import random
 
 # 페이지 기본 설정
 st.set_page_config(page_title="과목 유형 검사", page_icon="📚", layout="wide")
@@ -85,6 +86,13 @@ with st.container():
 
 st.title("📚 SETI 선택과목 유형검사")
 
+# --- 1. 개발자 모드 추가 ---
+# st.expander를 이용해 평소에는 숨겨둠
+dev_mode = False
+with st.expander("👀 개발자 모드 (테스트용)"):
+    if st.checkbox("📈 결과 페이지 바로보기"):
+        dev_mode = True
+
 version = st.radio(
     "**원하는 검사 버전을 선택해주세요.**",
     ('**라이트** (81문항)', '**기본** (115문항)'),
@@ -93,7 +101,8 @@ version = st.radio(
 )
 
 if not version:
-    st.info("👆 위에서 검사 버전을 선택해주세요.")
+    if not dev_mode: # 개발자 모드가 아닐 때만 안내 문구 표시
+        st.info("👆 위에서 검사 버전을 선택해주세요.")
     st.stop()
 
 file_to_load = 'lite_data.csv' if '라이트' in version else 'default_data.csv'
@@ -114,9 +123,21 @@ if 'version' not in st.session_state or st.session_state.version != version:
     st.session_state.current_section = 0
     st.session_state.responses = {}
 
-total_questions = len(df)
-answered_questions = len(st.session_state.responses)
-st.progress(answered_questions / total_questions, text=f"진행률: {answered_questions} / {total_questions} 문항")
+# --- 2. 개발자 모드 로직 ---
+if dev_mode:
+    # '기본' 버전을 기준으로 가짜 응답 데이터 생성
+    st.warning("개발자 모드가 활성화되었습니다. 랜덤 응답으로 결과 페이지를 표시합니다.")
+    dev_df = load_data('default_data.csv')
+    if dev_df is not None:
+        st.session_state.responses = {str(q_id): random.randint(1, 5) for q_id in dev_df['번호']}
+        df = dev_df # 결과 계산을 위해 df를 기본 버전으로 설정
+    else:
+        st.error("개발자 모드를 위해 default_data.csv 파일이 필요합니다.")
+        st.stop()
+else:
+    total_questions = len(df)
+    answered_questions = len(st.session_state.responses)
+    st.progress(answered_questions / total_questions, text=f"진행률: {answered_questions} / {total_questions} 문항")
 
 def display_survey():
     section_index = st.session_state.current_section
@@ -155,7 +176,7 @@ def display_survey():
 
 def display_results():
     all_answers = list(st.session_state.responses.values())
-    if len(set(all_answers)) == 1:
+    if len(set(all_answers)) == 1 and not dev_mode: # 개발자 모드일때는 경고 제외
         st.warning(f"모든 문항에 '{all_answers[0]}'번으로만 응답하셨습니다. 보다 정확한 결과를 위해 다양한 선택을 해보시길 권장합니다.")
 
     with st.spinner('결과를 분석하는 중입니다...'):
@@ -221,20 +242,16 @@ def display_results():
         fig.update_xaxes(tickangle=0)
         st.plotly_chart(fig, use_container_width=True)
         
-        # --- 다운로드 기능 추가 ---
         st.write("---")
         st.subheader("📋 결과 저장하기")
 
-        # 1. 텍스트 결과 생성
         text_results = "나의 SETI 선택과목 유형검사 결과\n"
         text_results += "================================\n"
         text_results += grouped_results_text
         text_results += "\n\n* 본 결과는 참고용으로만 활용하시기 바랍니다."
 
-        # 2. 그래프 이미지 생성
         img_bytes = fig.to_image(format="png")
 
-        # 다운로드 버튼 2개를 컬럼으로 배치
         col1, col2 = st.columns(2)
         with col1:
             st.download_button(
@@ -261,7 +278,10 @@ def display_results():
         st.session_state.clear()
         st.rerun()
 
-if 'current_section' in st.session_state and st.session_state.current_section < len(section_list):
-    display_survey()
-elif 'responses' in st.session_state and st.session_state.responses:
+# --- 3. 메인 로직 수정 ---
+# 개발자 모드가 활성화되었거나, 설문이 끝나고 응답이 있으면 결과 표시
+if dev_mode or ('responses' in st.session_state and st.session_state.responses):
     display_results()
+# 개발자 모드가 아니고, 설문이 진행 중이면 설문 표시
+elif not dev_mode and 'current_section' in st.session_state and st.session_state.current_section < len(section_list):
+    display_survey()

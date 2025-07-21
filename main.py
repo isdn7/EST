@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from streamlit_slick import slick # marquee 대신 slick 라이브러리 사용
+import time # 시간 제어를 위해 time 라이브러리 추가
+import random # 조언을 무작위로 보여주기 위해 random 라이브러리 추가
 
 # 페이지 기본 설정
 st.set_page_config(page_title="과목 유형 검사", page_icon="📚", layout="centered")
@@ -24,7 +25,7 @@ def load_data(file_path):
                 
         return df
     except Exception as e:
-        st.error(f"파일 로드 중 오류: {e}")
+        st.error(f"데이터 파일 로드 중 오류: {e}")
         return None
 
 # --- UI 시작 ---
@@ -38,52 +39,56 @@ version = st.radio(
     horizontal=True
 )
 
-# --- 1. 전광판 기능 개선 (slick 사용) ---
+# --- 1. 전광판 기능 수정 (스트림릿 내장 기능 사용) ---
 if version: # 버전을 선택했을 때만 전광판 표시
     try:
         advice_df = pd.read_csv('advice_data.csv', header=None)
         advice_list = advice_df[0].dropna().tolist()
         
-        # slick을 이용해 슬라이드 형태로 조언 표시
-        slick(items=advice_list,
-              options={'autoplay': True, 'autoplaySpeed': 3000, 'dots': False})
+        # st.session_state를 이용해 현재 보여줄 조언의 순서를 기억
+        if 'advice_idx' not in st.session_state:
+            st.session_state.advice_idx = 0
+
+        # st.empty()로 비어있는 공간을 만들고, 그 안에 조언을 표시
+        placeholder = st.empty()
+        with placeholder.container():
+            st.info(f"💡 선배들의 조언: {advice_list[st.session_state.advice_idx]}")
+        
+        # 보여줄 조언의 순서를 1 증가시킴 (리스트 길이를 넘어가면 다시 0으로)
+        st.session_state.advice_idx = (st.session_state.advice_idx + 1) % len(advice_list)
 
     except Exception:
         pass # 조언 파일이 없어도 오류 없이 넘어감
 
 st.write("---")
 
+
 if not version:
     st.info("👆 위에서 검사 버전을 선택해주세요.")
     st.stop()
 
-# 버전에 따른 데이터 파일 로드
+# (이하 나머지 코드는 이전과 동일합니다)
 file_to_load = 'lite_data.csv' if '라이트' in version else 'default_data.csv'
 df = load_data(file_to_load)
-
 if df is None: st.stop()
 required_columns = ['번호', '수정내용', '척도', '카테고리', '관련교과군']
 if not all(col in df.columns for col in required_columns):
     st.error("CSV 파일의 컬럼명을 확인해주세요.")
     st.stop()
-
 SUBJECT_ORDER = ['국어', '수학', '영어', '독일어', '중국어', '일본어', '물리', '화학', '생명과학', '지구과학', '일반사회', '역사', '윤리', '지리']
 SECTION_ORDER = ['기초교과군', '제2외국어군', '과학군', '사회군']
 section_list = [s for s in SECTION_ORDER if s in df['카테고리'].unique()]
 if not section_list:
     st.error("CSV 파일의 '카테고리' 열 내용을 확인해주세요.")
     st.stop()
-
 if 'version' not in st.session_state or st.session_state.version != version:
     st.session_state.version = version
     st.session_state.current_section = 0
     st.session_state.responses = {}
 
-# --- 3. 진행률 표시 기능 추가 ---
 total_questions = len(df)
 answered_questions = len(st.session_state.responses)
 st.progress(answered_questions / total_questions, text=f"진행률: {answered_questions} / {total_questions} 문항")
-
 
 def display_survey():
     section_index = st.session_state.current_section
@@ -91,13 +96,11 @@ def display_survey():
     questions_df = df[df['카테고리'] == current_section_name].astype({'번호': str})
     
     st.subheader(f"섹션 {section_index + 1}: {current_section_name}")
-    
     options_map = {1: "1(전혀 아니다)", 2: "2(아니다)", 3: "3(보통이다)", 4: "4(그렇다)", 5: "5(매우 그렇다)"}
     
     with st.form(key=f"form_{version}_{section_index}"):
         for _, row in questions_df.iterrows():
             st.markdown(f"**{row['번호']}. {row['수정내용']}**")
-            # --- 2. 응답 기본값 해제 (index=None 추가) ---
             st.radio("선택", [1, 2, 3, 4, 5], key=f"q_{row['번호']}", 
                      format_func=lambda x: options_map[x], 
                      horizontal=True, 
@@ -106,19 +109,21 @@ def display_survey():
         
         button_label = "결과 분석하기" if (section_index == len(section_list) - 1) else "다음 섹션으로"
         if st.form_submit_button(button_label):
+            all_answered = True
             for _, row in questions_df.iterrows():
-                # 답변을 안 한 문항이 있으면 경고 표시
                 if st.session_state[f"q_{row['번호']}"] is None:
-                    st.warning("모든 문항에 답변해주세요!")
-                    return # 함수 종료
-                st.session_state.responses[str(row['번호'])] = st.session_state[f"q_{row['번호']}"]
-            st.session_state.current_section += 1
-            st.rerun()
+                    all_answered = False
+                    break
+            
+            if not all_answered:
+                st.warning("모든 문항에 답변해주세요!")
+            else:
+                for _, row in questions_df.iterrows():
+                    st.session_state.responses[str(row['번호'])] = st.session_state[f"q_{row['번호']}"]
+                st.session_state.current_section += 1
+                st.rerun()
 
 def display_results():
-    import plotly.express as px
-    
-    # --- 4. 성의 없는 응답 경고 ---
     all_answers = list(st.session_state.responses.values())
     if len(set(all_answers)) == 1:
         st.warning(f"모든 문항에 '{all_answers[0]}'번으로만 응답하셨습니다. 보다 정확한 결과를 위해 다양한 선택을 해보시길 권장합니다.")
@@ -161,17 +166,10 @@ def display_results():
 
     if sorted_scores_dict:
         st.subheader("💡 나의 상위 선호 과목 (교과군별)")
-        
-        # --- 5. 결과 그룹핑 ---
         subject_to_group_map = df.set_index('관련교과군')['카테고리'].to_dict()
-        
-        # 교과군 순서대로 결과를 표시
         for group_name in SECTION_ORDER:
-            # 해당 그룹에 속하는 과목들만 필터링
             group_subjects = [s for s, g in subject_to_group_map.items() if g == group_name and s in sorted_scores_dict]
-            # 점수가 높은 순으로 정렬
             group_subjects.sort(key=lambda s: sorted_scores_dict.get(s, 0), reverse=True)
-
             if group_subjects:
                 st.markdown(f"**▌ {group_name}**")
                 cols = st.columns(len(group_subjects))
@@ -196,7 +194,6 @@ def display_results():
         st.session_state.clear()
         st.rerun()
 
-# --- 메인 로직 실행 ---
 if 'current_section' in st.session_state and st.session_state.current_section < len(section_list):
     display_survey()
 elif 'responses' in st.session_state and st.session_state.responses:

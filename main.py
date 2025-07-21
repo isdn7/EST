@@ -6,12 +6,11 @@ import random
 # 페이지 기본 설정
 st.set_page_config(page_title="과목 유형 검사", page_icon="📚", layout="wide")
 
+# CSS 주입
 st.markdown(
     """
     <style>
-    .st-emotion-cache-18ni7ap {
-        padding-top: 6rem;
-    }
+    .st-emotion-cache-18ni7ap { padding-top: 6rem; }
     </style>
     """,
     unsafe_allow_html=True
@@ -39,36 +38,42 @@ def load_data(file_path):
         return None
 
 # --- 세션 상태 초기화 ---
-if 'dev_mode' not in st.session_state:
-    st.session_state.dev_mode = False
+if 'dev_authenticated' not in st.session_state:
+    st.session_state.dev_authenticated = False
+if 'show_dev_results' not in st.session_state:
+    st.session_state.show_dev_results = False
 
-# --- 사이드바 개발자 모드 로직 ---
+# --- 사이드바 개발자 모드 (로그인 폼 방식) ---
 with st.sidebar:
     st.header("개발자용")
-    password = st.text_input("비밀번호를 입력하세요", type="password")
     
-    if "passwords" in st.secrets and password == st.secrets.passwords.dev_mode_password:
+    if st.session_state.dev_authenticated:
         st.success("인증 성공")
         if st.button("결과 페이지 바로보기 (기본 버전)"):
-            st.session_state.dev_mode = True
-            st.rerun() # dev_mode 상태를 즉시 적용하기 위해 새로고침
-    
-    if st.session_state.dev_mode:
-        if st.button("개발자 모드 비활성화"):
-            st.session_state.dev_mode = False
-            # 세션 상태 초기화를 위해 다른 변수들도 초기화
-            st.session_state.pop('version', None)
-            st.session_state.pop('current_section', None)
-            st.session_state.pop('responses', None)
+            st.session_state.show_dev_results = True
             st.rerun()
+        if st.button("로그아웃"):
+            st.session_state.dev_authenticated = False
+            st.session_state.show_dev_results = False
+            st.rerun()
+    else:
+        with st.form("login_form"):
+            password = st.text_input("비밀번호", type="password")
+            submitted = st.form_submit_button("로그인")
+            if submitted:
+                if "passwords" in st.secrets and password == st.secrets.passwords.dev_mode_password:
+                    st.session_state.dev_authenticated = True
+                    st.rerun()
+                else:
+                    st.error("비밀번호가 틀렸습니다.")
 
 # --- UI 및 메인 로직 ---
+# 전광판 (에러 방지를 위해 try-except로 감쌈)
 with st.container():
     try:
         advice_df = pd.read_csv('advice_data.csv', header=None)
         advice_list = advice_df[0].dropna().tolist()
         marquee_content = " ★★★ ".join(advice_list)
-        
         marquee_speed_seconds = 240
         st.markdown(
             f"""
@@ -144,7 +149,6 @@ def display_survey(df):
                     st.session_state.current_section += 1
                     st.rerun()
     else:
-        # 설문이 완료된 상태이므로 결과 페이지로 전환
         st.session_state.show_results = True
         st.rerun()
 
@@ -221,12 +225,11 @@ def display_results(df, is_dev_mode=False):
         st.session_state.clear()
         st.rerun()
 
-
 # --- 메인 로직 분기 ---
 SUBJECT_ORDER = ['국어', '수학', '영어', '독일어', '중국어', '일본어', '물리', '화학', '생명과학', '지구과학', '일반사회', '역사', '윤리', '지리']
 SECTION_ORDER = ['기초교과군', '제2외국어군', '과학군', '사회군']
 
-if st.session_state.dev_mode:
+if st.session_state.show_dev_results:
     st.warning("개발자 모드가 활성화되었습니다. 랜덤 응답으로 결과 페이지를 표시합니다.")
     df_dev = load_data('default_data.csv')
     if df_dev is not None:

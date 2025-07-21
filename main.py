@@ -45,7 +45,7 @@ if version:
         marquee_content = " ★★★ ".join(advice_list)
         
         # <<< 속도 조절: 이 숫자를 크게 할수록 느려집니다 (단위: 초) >>>
-        marquee_speed_seconds = 160
+        marquee_speed_seconds = 240
 
         # HTML과 CSS를 사용하여 전광판 효과 구현
         st.markdown(

@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from streamlit_marquee import streamlit_marquee # marquee 라이브러리 다시 사용
 
 # 페이지 기본 설정
 st.set_page_config(page_title="과목 유형 검사", page_icon="📚", layout="centered")
@@ -38,30 +37,56 @@ version = st.radio(
     horizontal=True
 )
 
-# --- 1. 속도 조절된 전광판 기능 (marquee 사용) ---
+# --- 1. 속도 조절이 가능한 HTML/CSS 전광판 ---
 if version:
     try:
         advice_df = pd.read_csv('advice_data.csv', header=None)
         advice_list = advice_df[0].dropna().tolist()
         marquee_content = " ★★★ ".join(advice_list)
         
-        streamlit_marquee(
-            content=marquee_content,
-            velocity=-10,  # 속도 조절 (숫자가 작을수록 느려짐)
-            loop=0,
-            background="#222222",
-            font_size="18px",
+        # <<< 속도 조절: 이 숫자를 크게 할수록 느려집니다 (단위: 초) >>>
+        marquee_speed_seconds = 80
+
+        # HTML과 CSS를 사용하여 전광판 효과 구현
+        st.markdown(
+            f"""
+            <style>
+            .marquee-container {{
+                width: 100%;
+                background-color: #222222;
+                color: white;
+                padding: 10px 0;
+                overflow: hidden;
+                box-sizing: border-box;
+            }}
+            .marquee-text {{
+                display: inline-block;
+                padding-left: 100%;
+                animation: marquee {marquee_speed_seconds}s linear infinite;
+                white-space: nowrap;
+                font-size: 18px;
+            }}
+            @keyframes marquee {{
+                0%   {{ transform: translateX(0); }}
+                100% {{ transform: translateX(-100%); }}
+            }}
+            </style>
+            <div class="marquee-container">
+                <div class="marquee-text">{marquee_content}</div>
+            </div>
+            """,
+            unsafe_allow_html=True
         )
     except Exception:
         pass
 
 st.write("---")
 
+# --- 이하 코드는 모두 동일합니다 ---
 if not version:
     st.info("👆 위에서 검사 버전을 선택해주세요.")
     st.stop()
 
-# (이하 나머지 코드는 이전과 동일합니다)
 file_to_load = 'lite_data.csv' if '라이트' in version else 'default_data.csv'
 df = load_data(file_to_load)
 if df is None: st.stop()

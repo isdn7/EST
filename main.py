@@ -6,12 +6,11 @@ import random
 # 페이지 기본 설정
 st.set_page_config(page_title="과목 유형 검사", page_icon="📚", layout="wide")
 
-# 상단 고정 전광판이 다른 콘텐츠를 가리지 않도록 전체 페이지에 여백 추가
 st.markdown(
     """
     <style>
-    .st-emotion-cache-18ni7ap { /* 스트림릿의 메인 콘텐츠 컨테이너 */
-        padding-top: 6rem; /* 전광판이 들어갈 공간 확보 */
+    .st-emotion-cache-18ni7ap {
+        padding-top: 6rem;
     }
     </style>
     """,
@@ -86,12 +85,15 @@ with st.container():
 
 st.title("📚 SETI 선택과목 유형검사")
 
-# --- 1. 개발자 모드 추가 ---
-# st.expander를 이용해 평소에는 숨겨둠
+# 개발자 모드 (사이드바에 숨김)
 dev_mode = False
-with st.expander("👀 개발자 모드 (테스트용)"):
-    if st.checkbox("📈 결과 페이지 바로보기"):
-        dev_mode = True
+with st.sidebar:
+    st.header("개발자용")
+    password = st.text_input("비밀번호를 입력하세요", type="password")
+    if "passwords" in st.secrets and password == st.secrets.passwords.dev_mode_password:
+        st.success("개발자 모드 활성화")
+        if st.button("결과 페이지 바로보기"):
+            dev_mode = True
 
 version = st.radio(
     "**원하는 검사 버전을 선택해주세요.**",
@@ -100,40 +102,40 @@ version = st.radio(
     horizontal=True
 )
 
-if not version:
-    if not dev_mode: # 개발자 모드가 아닐 때만 안내 문구 표시
-        st.info("👆 위에서 검사 버전을 선택해주세요.")
+if not version and not dev_mode:
+    st.info("👆 위에서 검사 버전을 선택해주세요.")
     st.stop()
 
-file_to_load = 'lite_data.csv' if '라이트' in version else 'default_data.csv'
+if dev_mode:
+    file_to_load = 'default_data.csv'
+else:
+    file_to_load = 'lite_data.csv' if '라이트' in version else 'default_data.csv'
+
 df = load_data(file_to_load)
+
 if df is None: st.stop()
 required_columns = ['번호', '수정내용', '척도', '카테고리', '관련교과군']
 if not all(col in df.columns for col in required_columns):
     st.error("CSV 파일의 컬럼명을 확인해주세요.")
     st.stop()
+
 SUBJECT_ORDER = ['국어', '수학', '영어', '독일어', '중국어', '일본어', '물리', '화학', '생명과학', '지구과학', '일반사회', '역사', '윤리', '지리']
 SECTION_ORDER = ['기초교과군', '제2외국어군', '과학군', '사회군']
 section_list = [s for s in SECTION_ORDER if s in df['카테고리'].unique()]
-if not section_list:
+
+if not section_list and not dev_mode:
     st.error("CSV 파일의 '카테고리' 열 내용을 확인해주세요.")
     st.stop()
-if 'version' not in st.session_state or st.session_state.version != version:
-    st.session_state.version = version
-    st.session_state.current_section = 0
-    st.session_state.responses = {}
 
-# --- 2. 개발자 모드 로직 ---
+if 'version' not in st.session_state or st.session_state.version != version:
+    if not dev_mode:
+        st.session_state.version = version
+        st.session_state.current_section = 0
+        st.session_state.responses = {}
+
 if dev_mode:
-    # '기본' 버전을 기준으로 가짜 응답 데이터 생성
     st.warning("개발자 모드가 활성화되었습니다. 랜덤 응답으로 결과 페이지를 표시합니다.")
-    dev_df = load_data('default_data.csv')
-    if dev_df is not None:
-        st.session_state.responses = {str(q_id): random.randint(1, 5) for q_id in dev_df['번호']}
-        df = dev_df # 결과 계산을 위해 df를 기본 버전으로 설정
-    else:
-        st.error("개발자 모드를 위해 default_data.csv 파일이 필요합니다.")
-        st.stop()
+    st.session_state.responses = {str(q_id): random.randint(1, 5) for q_id in df['번호']}
 else:
     total_questions = len(df)
     answered_questions = len(st.session_state.responses)
@@ -176,7 +178,7 @@ def display_survey():
 
 def display_results():
     all_answers = list(st.session_state.responses.values())
-    if len(set(all_answers)) == 1 and not dev_mode: # 개발자 모드일때는 경고 제외
+    if len(set(all_answers)) == 1 and not dev_mode:
         st.warning(f"모든 문항에 '{all_answers[0]}'번으로만 응답하셨습니다. 보다 정확한 결과를 위해 다양한 선택을 해보시길 권장합니다.")
 
     with st.spinner('결과를 분석하는 중입니다...'):
@@ -216,9 +218,6 @@ def display_results():
     st.header("📈 최종 분석 결과")
 
     if sorted_scores_dict:
-        # 다운로드용 텍스트 생성에 사용할 변수
-        grouped_results_text = ""
-
         st.subheader("💡 나의 상위 선호 과목 (교과군별)")
         subject_to_group_map = df.drop_duplicates(subset=['관련교과군']).set_index('관련교과군')['카테고리'].to_dict()
         for group_name in SECTION_ORDER:
@@ -226,13 +225,11 @@ def display_results():
             group_subjects.sort(key=lambda s: sorted_scores_dict.get(s, 0), reverse=True)
             if group_subjects:
                 st.markdown(f"**▌ {group_name}**")
-                grouped_results_text += f"\n[{group_name}]\n"
                 cols = st.columns(len(group_subjects))
                 for i, subject in enumerate(group_subjects):
                     with cols[i]:
                         score_val = sorted_scores_dict[subject]
                         st.metric(label=subject, value=f"{score_val:.2f}점")
-                        grouped_results_text += f"- {subject}: {score_val:.2f}점\n"
         
         st.subheader("과목별 선호도 점수 (평균 점수)")
         scores_series = pd.Series(normalized_scores).reindex(SUBJECT_ORDER).fillna(0)
@@ -242,32 +239,6 @@ def display_results():
         fig.update_xaxes(tickangle=0)
         st.plotly_chart(fig, use_container_width=True)
         
-        st.write("---")
-        st.subheader("📋 결과 저장하기")
-
-        text_results = "나의 SETI 선택과목 유형검사 결과\n"
-        text_results += "================================\n"
-        text_results += grouped_results_text
-        text_results += "\n\n* 본 결과는 참고용으로만 활용하시기 바랍니다."
-
-        img_bytes = fig.to_image(format="png")
-
-        col1, col2 = st.columns(2)
-        with col1:
-            st.download_button(
-                label="📊 그래프 이미지 다운로드 (.png)",
-                data=img_bytes,
-                file_name="SETI_graph_results.png",
-                mime="image/png"
-            )
-        with col2:
-            st.download_button(
-                label="📄 결과 텍스트 다운로드 (.txt)",
-                data=text_results.encode('utf-8'),
-                file_name="SETI_text_results.txt",
-                mime="text/plain"
-            )
-
     else:
         st.warning("분석 결과가 없습니다.")
 
@@ -278,10 +249,8 @@ def display_results():
         st.session_state.clear()
         st.rerun()
 
-# --- 3. 메인 로직 수정 ---
-# 개발자 모드가 활성화되었거나, 설문이 끝나고 응답이 있으면 결과 표시
+# --- 메인 로직 실행 ---
 if dev_mode or ('responses' in st.session_state and st.session_state.responses):
     display_results()
-# 개발자 모드가 아니고, 설문이 진행 중이면 설문 표시
 elif not dev_mode and 'current_section' in st.session_state and st.session_state.current_section < len(section_list):
     display_survey()

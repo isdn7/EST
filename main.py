@@ -47,7 +47,7 @@ if version:
         
         streamlit_marquee(
             content=marquee_content,
-            velocity=40,  # 속도 조절 (숫자가 작을수록 느려짐)
+            velocity=4,  # 속도 조절 (숫자가 작을수록 느려짐)
             loop=0,
             background="#222222",
             font_size="18px",

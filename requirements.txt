@@ -2,4 +2,4 @@ streamlit
 pandas
 openpyxl
 plotly
-kaleido
+kaleido==0.1.0.post1

@@ -221,24 +221,26 @@ def display_results():
     if sorted_scores_dict:
         st.subheader("💡 나의 상위 선호 과목 (교과군별)")
         
-        # --- 핵심 수정 부분 ---
-        # 1. 상위 8개 과목 이름 리스트 생성
         top_8_subjects_list = list(sorted_scores_dict.keys())[:8]
-
-        # 2. 과목-교과군 매핑 정보 생성
         subject_to_group_map = df.drop_duplicates(subset=['관련교과군']).set_index('관련교과군')['카테고리'].to_dict()
-
-        # 3. 교과군 순서대로, 상위 8개에 포함된 과목만 필터링하여 표시
+        
+        # --- 핵심 수정 부분: 교과군별로 컬럼을 나누는 대신, 하나의 그리드에 순서대로 표시 ---
+        # 전체 상위 과목 리스트를 교과군 순서에 맞게 재정렬
+        sorted_top_subjects = []
         for group_name in SECTION_ORDER:
-            # 현재 교과군에 속하면서, 상위 8개 리스트에 있는 과목만 필터링
-            group_subjects = [s for s in top_8_subjects_list if subject_to_group_map.get(s) == group_name]
-            
-            if group_subjects:
-                st.markdown(f"**▌ {group_name}**")
-                cols = st.columns(len(group_subjects))
-                for i, subject in enumerate(group_subjects):
-                    with cols[i]:
-                        st.metric(label=subject, value=f"{sorted_scores_dict[subject]:.2f}점")
+            for subject in top_8_subjects_list:
+                if subject_to_group_map.get(subject) == group_name:
+                    sorted_top_subjects.append(subject)
+
+        if sorted_top_subjects:
+            # 4개씩 컬럼을 만들어 왼쪽부터 채워나가기
+            num_subjects = len(sorted_top_subjects)
+            cols = st.columns(4)
+            for i in range(num_subjects):
+                subject = sorted_top_subjects[i]
+                with cols[i % 4]: # 4개 컬럼을 순환하며 사용
+                    st.metric(label=f"**{subject_to_group_map.get(subject)}** | {subject}", 
+                              value=f"{sorted_scores_dict[subject]:.2f}점")
         # --- 수정 끝 ---
         
         st.subheader("과목별 선호도 점수 (평균 점수)")

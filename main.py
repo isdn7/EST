@@ -3,20 +3,14 @@ import pandas as pd
 import plotly.express as px
 
 # 페이지 기본 설정
-st.set_page_config(page_title="과목 유형 검사", page_icon="📚", layout="wide") # wide layout으로 변경하여 안정성 확보
+st.set_page_config(page_title="과목 유형 검사", page_icon="📚", layout="wide")
 
-# --- 1. 최종 수정: 스트림릿 컨테이너에 직접 스타일 적용 ---
+# 상단 고정 전광판이 다른 콘텐츠를 가리지 않도록 전체 페이지에 여백 추가
 st.markdown(
     """
     <style>
-    /* 스트림릿의 헤더와 툴바가 들어가는 상단 부분을 찾아서 그 아래에 고정 */
-    header[data-testid="stHeader"] {
-        position: sticky;
-        top: 0;
-        z-index: 999;
-    }
     .st-emotion-cache-18ni7ap { /* 스트림릿의 메인 콘텐츠 컨테이너 */
-        padding-top: 2rem; /* 전광판이 들어갈 공간 확보 */
+        padding-top: 6rem; /* 전광판이 들어갈 공간 확보 */
     }
     </style>
     """,
@@ -45,8 +39,6 @@ def load_data(file_path):
         return None
 
 # --- UI 시작 ---
-
-# --- 2. 최종 수정: 전광판 코드를 컨테이너에 삽입 ---
 # st.container를 사용하여 전광판을 독립된 섹션으로 만듦
 with st.container():
     try:
@@ -93,7 +85,6 @@ with st.container():
     except Exception:
         pass
 
-
 st.title("📚 SETI 선택과목 유형검사")
 
 # 버전 선택 UI
@@ -104,8 +95,6 @@ version = st.radio(
     horizontal=True
 )
 
-
-# --- 이하 코드는 모두 동일합니다 ---
 if not version:
     st.info("👆 위에서 검사 버전을 선택해주세요.")
     st.stop()
@@ -135,7 +124,10 @@ st.progress(answered_questions / total_questions, text=f"진행률: {answered_qu
 def display_survey():
     section_index = st.session_state.current_section
     current_section_name = section_list[section_index]
-    questions_df = df[df['카테고리'] == current_section_name].astype({'번호': str})
+    
+    # --- 1. 핵심 수정: 문항 순서 섞기 ---
+    # 현재 섹션의 문항들을 불러온 뒤, .sample(frac=1)을 이용해 무작위로 섞음
+    questions_df = df[df['카테고리'] == current_section_name].sample(frac=1).reset_index(drop=True)
     
     st.subheader(f"섹션 {section_index + 1}: {current_section_name}")
     options_map = {1: "1(전혀 아니다)", 2: "2(아니다)", 3: "3(보통이다)", 4: "4(그렇다)", 5: "5(매우 그렇다)"}

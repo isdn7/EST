@@ -39,7 +39,6 @@ def load_data(file_path):
         return None
 
 # --- UI 시작 ---
-# st.container를 사용하여 전광판을 독립된 섹션으로 만듦
 with st.container():
     try:
         advice_df = pd.read_csv('advice_data.csv', header=None)
@@ -48,13 +47,12 @@ with st.container():
         
         marquee_speed_seconds = 240
 
-        # HTML과 CSS를 사용하여 전광판 효과 구현
         st.markdown(
             f"""
             <style>
             .marquee-container {{
                 position: fixed;
-                top: 55px; /* 스트림릿 헤더 바로 아래에 위치 */
+                top: 55px;
                 left: 0;
                 width: 100%;
                 z-index: 998;
@@ -87,7 +85,6 @@ with st.container():
 
 st.title("📚 SETI 선택과목 유형검사")
 
-# 버전 선택 UI
 version = st.radio(
     "**원하는 검사 버전을 선택해주세요.**",
     ('**라이트** (81문항)', '**기본** (115문항)'),
@@ -125,8 +122,6 @@ def display_survey():
     section_index = st.session_state.current_section
     current_section_name = section_list[section_index]
     
-    # --- 1. 핵심 수정: 문항 순서 섞기 ---
-    # 현재 섹션의 문항들을 불러온 뒤, .sample(frac=1)을 이용해 무작위로 섞음
     questions_df = df[df['카테고리'] == current_section_name].sample(frac=1).reset_index(drop=True)
     
     st.subheader(f"섹션 {section_index + 1}: {current_section_name}")
@@ -134,7 +129,9 @@ def display_survey():
     
     with st.form(key=f"form_{version}_{section_index}"):
         for _, row in questions_df.iterrows():
-            st.markdown(f"**{row['번호']}. {row['수정내용']}**")
+            # --- 핵심 수정: 문항 번호를 표시하지 않도록 변경 ---
+            st.markdown(f"**{row['수정내용']}**")
+            
             st.radio("선택", [1, 2, 3, 4, 5], key=f"q_{row['번호']}", 
                      format_func=lambda x: options_map[x], 
                      horizontal=True, 

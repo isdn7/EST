@@ -43,32 +43,33 @@ if 'dev_authenticated' not in st.session_state:
 if 'show_dev_results' not in st.session_state:
     st.session_state.show_dev_results = False
 
-# --- 사이드바 개발자 모드 (로그인 폼 방식) ---
-with st.sidebar:
-    st.header("개발자용")
-    
-    if st.session_state.dev_authenticated:
-        st.success("인증 성공")
-        if st.button("결과 페이지 바로보기 (기본 버전)"):
-            st.session_state.show_dev_results = True
-            st.rerun()
-        if st.button("로그아웃"):
-            st.session_state.dev_authenticated = False
-            st.session_state.show_dev_results = False
-            st.rerun()
-    else:
-        with st.form("login_form"):
-            password = st.text_input("비밀번호", type="password")
-            submitted = st.form_submit_button("로그인")
-            if submitted:
-                if "passwords" in st.secrets and password == st.secrets.passwords.dev_mode_password:
-                    st.session_state.dev_authenticated = True
-                    st.rerun()
-                else:
-                    st.error("비밀번호가 틀렸습니다.")
+# --- 핵심 수정: URL 파라미터로 개발자 모드 접근 제어 ---
+# URL에 ?dev=true가 있을 때만 사이드바 로직 실행
+if st.query_params.get("dev") == "true":
+    with st.sidebar:
+        st.header("개발자용")
+        
+        if st.session_state.dev_authenticated:
+            st.success("인증 성공")
+            if st.button("결과 페이지 바로보기 (기본 버전)"):
+                st.session_state.show_dev_results = True
+                st.rerun()
+            if st.button("로그아웃"):
+                st.session_state.dev_authenticated = False
+                st.session_state.show_dev_results = False
+                st.rerun()
+        else:
+            with st.form("login_form"):
+                password = st.text_input("비밀번호", type="password")
+                submitted = st.form_submit_button("로그인")
+                if submitted:
+                    if "passwords" in st.secrets and password == st.secrets.passwords.dev_mode_password:
+                        st.session_state.dev_authenticated = True
+                        st.rerun()
+                    else:
+                        st.error("비밀번호가 틀렸습니다.")
 
 # --- UI 및 메인 로직 ---
-# 전광판 (에러 방지를 위해 try-except로 감쌈)
 with st.container():
     try:
         advice_df = pd.read_csv('advice_data.csv', header=None)
@@ -199,14 +200,19 @@ def display_results(df, is_dev_mode=False):
         st.subheader("💡 나의 상위 선호 과목 (교과군별)")
         subject_to_group_map = df.drop_duplicates(subset=['관련교과군']).set_index('관련교과군')['카테고리'].to_dict()
         top_8_subjects_list = list(sorted_scores_dict.keys())[:8]
+        sorted_top_subjects = []
         for group_name in SECTION_ORDER:
-            group_subjects = [s for s in top_8_subjects_list if subject_to_group_map.get(s) == group_name]
-            if group_subjects:
-                st.markdown(f"**▌ {group_name}**")
-                cols = st.columns(len(group_subjects))
-                for i, subject in enumerate(group_subjects):
-                    with cols[i]:
-                        st.metric(label=subject, value=f"{sorted_scores_dict[subject]:.2f}점")
+            for subject in top_8_subjects_list:
+                if subject_to_group_map.get(subject) == group_name:
+                    sorted_top_subjects.append(subject)
+
+        if sorted_top_subjects:
+            cols = st.columns(4)
+            for i in range(len(sorted_top_subjects)):
+                subject = sorted_top_subjects[i]
+                with cols[i % 4]:
+                    st.metric(label=f"**{subject_to_group_map.get(subject)}** | {subject}", 
+                              value=f"{sorted_scores_dict[subject]:.2f}점")
         
         st.subheader("과목별 선호도 점수 (평균 점수)")
         scores_series = pd.Series(normalized_scores).reindex(SUBJECT_ORDER).fillna(0)
@@ -238,7 +244,6 @@ if st.session_state.show_dev_results:
     else:
         st.error("개발자 모드를 위해 default_data.csv 파일이 필요합니다.")
 else:
-    # 일반 사용자 플로우
     version = st.radio(
         "**원하는 검사 버전을 선택해주세요.**",
         ('**라이트** (81문항)', '**기본** (115문항)'),

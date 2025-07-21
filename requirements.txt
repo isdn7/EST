@@ -4,4 +4,3 @@ openpyxl
 plotly
 streamlit-marquee
 streamlit-slick
-slick

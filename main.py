@@ -129,7 +129,6 @@ def display_survey():
     
     with st.form(key=f"form_{version}_{section_index}"):
         for _, row in questions_df.iterrows():
-            # --- 핵심 수정: 문항 번호를 표시하지 않도록 변경 ---
             st.markdown(f"**{row['수정내용']}**")
             
             st.radio("선택", [1, 2, 3, 4, 5], key=f"q_{row['번호']}", 
@@ -196,6 +195,9 @@ def display_results():
     st.header("📈 최종 분석 결과")
 
     if sorted_scores_dict:
+        # 다운로드용 텍스트 생성에 사용할 변수
+        grouped_results_text = ""
+
         st.subheader("💡 나의 상위 선호 과목 (교과군별)")
         subject_to_group_map = df.drop_duplicates(subset=['관련교과군']).set_index('관련교과군')['카테고리'].to_dict()
         for group_name in SECTION_ORDER:
@@ -203,10 +205,13 @@ def display_results():
             group_subjects.sort(key=lambda s: sorted_scores_dict.get(s, 0), reverse=True)
             if group_subjects:
                 st.markdown(f"**▌ {group_name}**")
+                grouped_results_text += f"\n[{group_name}]\n"
                 cols = st.columns(len(group_subjects))
                 for i, subject in enumerate(group_subjects):
                     with cols[i]:
-                        st.metric(label=subject, value=f"{sorted_scores_dict[subject]:.2f}점")
+                        score_val = sorted_scores_dict[subject]
+                        st.metric(label=subject, value=f"{score_val:.2f}점")
+                        grouped_results_text += f"- {subject}: {score_val:.2f}점\n"
         
         st.subheader("과목별 선호도 점수 (평균 점수)")
         scores_series = pd.Series(normalized_scores).reindex(SUBJECT_ORDER).fillna(0)
@@ -215,6 +220,37 @@ def display_results():
         fig = px.bar(chart_df, x='과목', y='평균 점수', text_auto='.2f')
         fig.update_xaxes(tickangle=0)
         st.plotly_chart(fig, use_container_width=True)
+        
+        # --- 다운로드 기능 추가 ---
+        st.write("---")
+        st.subheader("📋 결과 저장하기")
+
+        # 1. 텍스트 결과 생성
+        text_results = "나의 SETI 선택과목 유형검사 결과\n"
+        text_results += "================================\n"
+        text_results += grouped_results_text
+        text_results += "\n\n* 본 결과는 참고용으로만 활용하시기 바랍니다."
+
+        # 2. 그래프 이미지 생성
+        img_bytes = fig.to_image(format="png")
+
+        # 다운로드 버튼 2개를 컬럼으로 배치
+        col1, col2 = st.columns(2)
+        with col1:
+            st.download_button(
+                label="📊 그래프 이미지 다운로드 (.png)",
+                data=img_bytes,
+                file_name="SETI_graph_results.png",
+                mime="image/png"
+            )
+        with col2:
+            st.download_button(
+                label="📄 결과 텍스트 다운로드 (.txt)",
+                data=text_results.encode('utf-8'),
+                file_name="SETI_text_results.txt",
+                mime="text/plain"
+            )
+
     else:
         st.warning("분석 결과가 없습니다.")
 

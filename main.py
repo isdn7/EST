@@ -6,11 +6,12 @@ import random
 # 페이지 기본 설정
 st.set_page_config(page_title="과목 유형 검사", page_icon="📚", layout="wide")
 
-# CSS 주입
 st.markdown(
     """
     <style>
-    .st-emotion-cache-18ni7ap { padding-top: 6rem; }
+    .st-emotion-cache-18ni7ap {
+        padding-top: 6rem;
+    }
     </style>
     """,
     unsafe_allow_html=True
@@ -37,28 +38,27 @@ def load_data(file_path):
         st.error(f"데이터 파일 로드 중 오류: {e}")
         return None
 
-# --- 세션 상태 초기화 ---
+# 세션 상태 초기화
 if 'dev_authenticated' not in st.session_state:
     st.session_state.dev_authenticated = False
 if 'show_dev_results' not in st.session_state:
     st.session_state.show_dev_results = False
 
-# --- 핵심 수정: URL 파라미터로 개발자 모드 접근 제어 ---
-# URL에 ?dev=true가 있을 때만 사이드바 로직 실행
-if st.query_params.get("dev") == "true":
-    with st.sidebar:
-        st.header("개발자용")
-        
-        if st.session_state.dev_authenticated:
-            st.success("인증 성공")
-            if st.button("결과 페이지 바로보기 (기본 버전)"):
-                st.session_state.show_dev_results = True
-                st.rerun()
-            if st.button("로그아웃"):
-                st.session_state.dev_authenticated = False
-                st.session_state.show_dev_results = False
-                st.rerun()
-        else:
+# 사이드바 개발자 모드
+with st.sidebar:
+    st.header("개발자용")
+    if st.session_state.dev_authenticated:
+        st.success("인증 성공")
+        if st.button("결과 페이지 바로보기 (기본 버전)"):
+            st.session_state.show_dev_results = True
+            st.rerun()
+        if st.button("로그아웃"):
+            st.session_state.dev_authenticated = False
+            st.session_state.show_dev_results = False
+            st.rerun()
+    else:
+        # URL 파라미터로 개발자 모드 접근 제어
+        if st.query_params.get("dev") == "true":
             with st.form("login_form"):
                 password = st.text_input("비밀번호", type="password")
                 submitted = st.form_submit_button("로그인")
@@ -69,7 +69,7 @@ if st.query_params.get("dev") == "true":
                     else:
                         st.error("비밀번호가 틀렸습니다.")
 
-# --- UI 및 메인 로직 ---
+# UI 시작
 with st.container():
     try:
         advice_df = pd.read_csv('advice_data.csv', header=None)
@@ -198,21 +198,23 @@ def display_results(df, is_dev_mode=False):
 
     if sorted_scores_dict:
         st.subheader("💡 나의 상위 선호 과목 (교과군별)")
-        subject_to_group_map = df.drop_duplicates(subset=['관련교과군']).set_index('관련교과군')['카테고리'].to_dict()
+        
         top_8_subjects_list = list(sorted_scores_dict.keys())[:8]
-        sorted_top_subjects = []
+        subject_to_group_map = df.drop_duplicates(subset=['관련교과군']).set_index('관련교과군')['카테고리'].to_dict()
+        
+        # --- 핵심 수정 부분: 교과군별로 루프를 돌며, 각각 4칸짜리 그리드에 표시 ---
         for group_name in SECTION_ORDER:
-            for subject in top_8_subjects_list:
-                if subject_to_group_map.get(subject) == group_name:
-                    sorted_top_subjects.append(subject)
-
-        if sorted_top_subjects:
-            cols = st.columns(4)
-            for i in range(len(sorted_top_subjects)):
-                subject = sorted_top_subjects[i]
-                with cols[i % 4]:
-                    st.metric(label=f"**{subject_to_group_map.get(subject)}** | {subject}", 
-                              value=f"{sorted_scores_dict[subject]:.2f}점")
+            # 현재 교과군에 속하면서, 상위 8개 리스트에 있는 과목만 필터링
+            group_subjects = [s for s in top_8_subjects_list if subject_to_group_map.get(s) == group_name]
+            
+            if group_subjects:
+                st.markdown(f"**▌ {group_name}**")
+                # 항상 4개의 컬럼을 만들고, 그 안에 왼쪽부터 과목을 채움
+                cols = st.columns(4)
+                for i, subject in enumerate(group_subjects):
+                    with cols[i]:
+                        st.metric(label=subject, value=f"{sorted_scores_dict[subject]:.2f}점")
+        # --- 수정 끝 ---
         
         st.subheader("과목별 선호도 점수 (평균 점수)")
         scores_series = pd.Series(normalized_scores).reindex(SUBJECT_ORDER).fillna(0)

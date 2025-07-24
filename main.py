@@ -6,12 +6,11 @@ import random
 # 페이지 기본 설정
 st.set_page_config(page_title="과목 유형 검사", page_icon="📚", layout="wide")
 
+# CSS 주입
 st.markdown(
     """
     <style>
-    .st-emotion-cache-18ni7ap {
-        padding-top: 6rem;
-    }
+    .st-emotion-cache-18ni7ap { padding-top: 6rem; }
     </style>
     """,
     unsafe_allow_html=True
@@ -38,6 +37,17 @@ def load_data(file_path):
         st.error(f"데이터 파일 로드 중 오류: {e}")
         return None
 
+# --- 데이터 상수 정의 ---
+SUBJECT_ORDER = ['국어', '수학', '영어', '독일어', '중국어', '일본어', '물리', '화학', '생명과학', '지구과학', '일반사회', '역사', '윤리', '지리']
+SECTION_ORDER = ['기초교과군', '제2외국어군', '과학군', '사회군']
+# 1. 교과군별 과목 정보를 딕셔너리로 정의
+GROUP_TO_SUBJECTS_MAP = {
+    '기초교과군': ['국어', '수학', '영어'],
+    '제2외국어군': ['독일어', '중국어', '일본어'],
+    '과학군': ['물리', '화학', '생명과학', '지구과학'],
+    '사회군': ['일반사회', '역사', '윤리', '지리']
+}
+
 # 세션 상태 초기화
 if 'dev_authenticated' not in st.session_state:
     st.session_state.dev_authenticated = False
@@ -57,7 +67,6 @@ with st.sidebar:
             st.session_state.show_dev_results = False
             st.rerun()
     else:
-        # URL 파라미터로 개발자 모드 접근 제어
         if st.query_params.get("dev") == "true":
             with st.form("login_form"):
                 password = st.text_input("비밀번호", type="password")
@@ -121,6 +130,12 @@ def display_survey(df):
         current_section_name = section_list[section_index]
         questions_df = df[df['카테고리'] == current_section_name].sample(frac=1).reset_index(drop=True)
         st.subheader(f"섹션 {section_index + 1}: {current_section_name}")
+        
+        # --- 1. 섹션 시작 전 과목 안내 추가 ---
+        subjects_in_group = GROUP_TO_SUBJECTS_MAP.get(current_section_name, [])
+        if subjects_in_group:
+            st.info(f"해당 교과군에서는 **{' , '.join(subjects_in_group)}** 과목들의 선호도를 측정합니다.")
+
         options_map = {1: "1(전혀 아니다)", 2: "2(아니다)", 3: "3(보통이다)", 4: "4(그렇다)", 5: "5(매우 그렇다)"}
         
         with st.form(key=f"form_{version}_{section_index}"):
@@ -198,23 +213,16 @@ def display_results(df, is_dev_mode=False):
 
     if sorted_scores_dict:
         st.subheader("💡 나의 상위 선호 과목 (교과군별)")
-        
-        top_8_subjects_list = list(sorted_scores_dict.keys())[:8]
         subject_to_group_map = df.drop_duplicates(subset=['관련교과군']).set_index('관련교과군')['카테고리'].to_dict()
-        
-        # --- 핵심 수정 부분: 교과군별로 루프를 돌며, 각각 4칸짜리 그리드에 표시 ---
+        top_8_subjects_list = list(sorted_scores_dict.keys())[:8]
         for group_name in SECTION_ORDER:
-            # 현재 교과군에 속하면서, 상위 8개 리스트에 있는 과목만 필터링
             group_subjects = [s for s in top_8_subjects_list if subject_to_group_map.get(s) == group_name]
-            
             if group_subjects:
                 st.markdown(f"**▌ {group_name}**")
-                # 항상 4개의 컬럼을 만들고, 그 안에 왼쪽부터 과목을 채움
                 cols = st.columns(4)
                 for i, subject in enumerate(group_subjects):
-                    with cols[i]:
+                    with cols[i % 4]:
                         st.metric(label=subject, value=f"{sorted_scores_dict[subject]:.2f}점")
-        # --- 수정 끝 ---
         
         st.subheader("과목별 선호도 점수 (평균 점수)")
         scores_series = pd.Series(normalized_scores).reindex(SUBJECT_ORDER).fillna(0)
@@ -229,13 +237,26 @@ def display_results(df, is_dev_mode=False):
     st.write("---")
     st.info("이 검사는 개인의 흥미 유형을 알아보기 위한 간단한 검사이며, 결과는 참고용으로만 활용하시기 바랍니다. 검사자의 태도나 상황에 따라 정확도가 달라질 수 있으므로, 실제 교육과정 선택 시에는 다양한 요소를 함께 고려하시길 권장합니다.")
 
+    # --- 2. 결과 페이지에 추가 정보 섹션 추가 ---
+    st.subheader("เพิ่มเติม")
+    with st.expander("교과군별 과목 안내"):
+        for group, subjects in GROUP_TO_SUBJECTS_MAP.items():
+            st.markdown(f"**{group}**: {', '.join(subjects)}")
+    
+    st.caption("Made by: 서울고등학교 SELECT 프로젝트팀 (김OO, 이OO, 박OO, 최OO, 정OO)")
+    
     if st.button("검사 다시하기"):
         st.session_state.clear()
         st.rerun()
 
 # --- 메인 로직 분기 ---
-SUBJECT_ORDER = ['국어', '수학', '영어', '독일어', '중국어', '일본어', '물리', '화학', '생명과학', '지구과학', '일반사회', '역사', '윤리', '지리']
-SECTION_ORDER = ['기초교과군', '제2외국어군', '과학군', '사회군']
+# 일반 사용자 플로우
+version = st.radio(
+    "**원하는 검사 버전을 선택해주세요.**",
+    ('**라이트** (81문항)', '**기본** (115문항)'),
+    index=None,
+    horizontal=True
+)
 
 if st.session_state.show_dev_results:
     st.warning("개발자 모드가 활성화되었습니다. 랜덤 응답으로 결과 페이지를 표시합니다.")
@@ -245,27 +266,19 @@ if st.session_state.show_dev_results:
         display_results(df_dev, is_dev_mode=True)
     else:
         st.error("개발자 모드를 위해 default_data.csv 파일이 필요합니다.")
+elif version:
+    if 'version' not in st.session_state or st.session_state.version != version:
+        st.session_state.version = version
+        st.session_state.current_section = 0
+        st.session_state.responses = {}
+        st.session_state.show_results = False
+
+    file_to_load = 'lite_data.csv' if '라이트' in version else 'default_data.csv'
+    df = load_data(file_to_load)
+    if df is not None:
+        if st.session_state.get('show_results', False):
+             display_results(df)
+        else:
+             display_survey(df)
 else:
-    version = st.radio(
-        "**원하는 검사 버전을 선택해주세요.**",
-        ('**라이트** (81문항)', '**기본** (115문항)'),
-        index=None,
-        horizontal=True
-    )
-
-    if version:
-        if 'version' not in st.session_state or st.session_state.version != version:
-            st.session_state.version = version
-            st.session_state.current_section = 0
-            st.session_state.responses = {}
-            st.session_state.show_results = False
-
-        file_to_load = 'lite_data.csv' if '라이트' in version else 'default_data.csv'
-        df = load_data(file_to_load)
-        if df is not None:
-            if st.session_state.get('show_results', False):
-                 display_results(df)
-            else:
-                 display_survey(df)
-    else:
-        st.info("👆 위에서 검사 버전을 선택해주세요.")
+    st.info("👆 위에서 검사 버전을 선택해주세요.")

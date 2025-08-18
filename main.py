@@ -237,11 +237,11 @@ def display_results(df, is_dev_mode=False):
     st.write("---")
     st.info("이 검사는 개인의 흥미 유형을 알아보기 위한 간단한 검사이며, 결과는 참고용으로만 활용하시기 바랍니다. 검사자의 태도나 상황에 따라 정확도가 달라질 수 있으므로, 실제 교육과정 선택 시에는 다양한 요소를 함께 고려하시길 권장합니다.")
 
-    # --- 2. 결과 페이지에 추가 정보 섹션 추가 ---
-  with st.expander("교과군별 과목 안내"):
-  for group, subjects in GROUP_TO_SUBJECTS_MAP.items():
+     # --- 2. 결과 페이지 추가 정보 수정 ---
+    st.subheader("추가정보")
+    with st.expander("교과군별 과목 안내"):
+        for group, subjects in GROUP_TO_SUBJECTS_MAP.items():
             st.markdown(f"**{group}**: {', '.join(subjects)}")
-
 st.caption("Made by: 서울고등학교 SELECT 프로젝트팀 (김OO, 이OO, 박OO, 최OO, 정OO)")
     
 if st.button("검사 다시하기"):

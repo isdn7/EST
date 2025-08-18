@@ -238,38 +238,11 @@ def display_results(df, is_dev_mode=False):
     st.info("이 검사는 개인의 흥미 유형을 알아보기 위한 간단한 검사이며, 결과는 참고용으로만 활용하시기 바랍니다. 검사자의 태도나 상황에 따라 정확도가 달라질 수 있으므로, 실제 교육과정 선택 시에는 다양한 요소를 함께 고려하시길 권장합니다.")
 
     # --- 2. 결과 페이지에 추가 정보 섹션 추가 ---
-st.subheader("📖 전체 교과군별 과목 안내")
+  with st.expander("교과군별 과목 안내"):
 
-try:
-    # 1단계에서 준비한 CSV 파일을 읽어옵니다.
-    subject_list_df = pd.read_csv('교과군별_과목목록.csv')
-    
-    # '교과군' (예: 기초, 탐구, 체육·예술, 생활·교양) 목록을 가져옵니다.
-    main_groups = subject_list_df['교과군'].unique()
+        for group, subjects in GROUP_TO_SUBJECTS_MAP.items():
 
-    for group in main_groups:
-        # 1단계 확장 메뉴: 교과군
-        with st.expander(f"**{group}**"):
-            
-            # 현재 교과군에 해당하는 데이터만 필터링합니다.
-            group_df = subject_list_df[subject_list_df['교과군'] == group]
-            sub_groups = group_df['세부 교과군'].unique()
-
-            for sub_group in sub_groups:
-                # 2단계 확장 메뉴: 세부 교과군
-                with st.expander(f"{sub_group}"):
-                    subjects = group_df[group_df['세부 교과군'] == sub_group]['과목명'].tolist()
-                    
-                    # 최종 과목 목록을 보기 좋게 표시합니다.
-                    st.markdown("- " + "\n- ".join(subjects))
-
-except FileNotFoundError:
-    st.warning("'교과군별_과목목록.csv' 파일을 찾을 수 없습니다. 파일이 현재 폴더에 있는지 확인해주세요.")
-except Exception as e:
-    st.error(f"과목 목록 파일을 처리하는 중 오류가 발생했습니다: {e}")
-
-
-# --- 기존 코드 유지 ---
+            st.markdown(f"**{group}**: {', '.join(subjects)}")
 st.caption("Made by: 서울고등학교 SELECT 프로젝트팀 (김OO, 이OO, 박OO, 최OO, 정OO)")
     
 if st.button("검사 다시하기"):

@@ -10,8 +10,10 @@ st.set_page_config(page_title="과목 유형 검사", page_icon="📚", layout="
 st.markdown(
     """
     <style>
+    /* 기본 여백 조정 */
     .st-emotion-cache-18ni7ap { padding-top: 6rem; }
-    
+
+    /* '선배들의 조언' 고정 헤더 스타일 */
     .fixed-header {
         position: fixed;
         top: 0;
@@ -21,7 +23,33 @@ st.markdown(
         color: white;
         padding: 10px 0;
         text-align: center;
-        z-index: 1000; /* 마키보다 위에 오도록 z-index 설정 */
+        z-index: 1000; /* 전광판 텍스트보다 위에 오도록 설정 */
+    }
+
+    /* 전광판(marquee) 컨테이너 스타일 */
+    .marquee-container {
+        position: fixed;
+        top: 50px; /* 고정 헤더 아래에 위치하도록 조정 */
+        left: 0;
+        width: 100%;
+        z-index: 998;
+        background-color: #222222;
+        color: white;
+        padding: 10px 0;
+        overflow: hidden;
+        box-sizing: border-box;
+    }
+
+    /* 전광판 텍스트 애니메이션 */
+    .marquee-text {
+        display: inline-block; padding-left: 100%;
+        animation: marquee 240s linear infinite;
+        white-space: nowrap; font-size: 18px;
+    }
+
+    @keyframes marquee {
+        0%   { transform: translateX(0); }
+        100% { transform: translateX(-100%); }
     }
     </style>
     """,
@@ -95,9 +123,8 @@ with st.container():
         advice_df = pd.read_csv('advice_data.csv', header=None)
         advice_list = advice_df[0].dropna().tolist()
         marquee_content = " ★★★ ".join(advice_list)
-        marquee_speed_seconds = 240
-        
-        # 선배들의 조언 고정 텍스트 추가
+
+        # '선배들의 조언' 고정 텍스트 표시
         st.markdown(
             """
             <div class="fixed-header">
@@ -107,24 +134,9 @@ with st.container():
             unsafe_allow_html=True
         )
 
+        # 전광판 텍스트 표시
         st.markdown(
             f"""
-            <style>
-            .marquee-container {{
-                position: fixed; top: 55px; left: 0; width: 100%; z-index: 998;
-                background-color: #222222; color: white; padding: 10px 0;
-                overflow: hidden; box-sizing: border-box;
-            }}
-            .marquee-text {{
-                display: inline-block; padding-left: 100%;
-                animation: marquee {marquee_speed_seconds}s linear infinite;
-                white-space: nowrap; font-size: 18px;
-            }}
-            @keyframes marquee {{
-                0%   {{ transform: translateX(0); }}
-                100% {{ transform: translateX(-100%); }}
-            }}
-            </style>
             <div class="marquee-container">
                 <div class="marquee-text">{marquee_content}</div>
             </div>
@@ -153,7 +165,6 @@ def display_survey(df):
         questions_df = df[df['카테고리'] == current_section_name].sample(frac=1).reset_index(drop=True)
         st.subheader(f"섹션 {section_index + 1}: {current_section_name}")
         
-        # --- 1. 섹션 시작 전 과목 안내 추가 ---
         subjects_in_group = GROUP_TO_SUBJECTS_MAP.get(current_section_name, [])
         if subjects_in_group:
             st.info(f"해당 교과군에서는 **{' , '.join(subjects_in_group)}** 과목들의 선호도를 측정합니다.")
@@ -259,7 +270,6 @@ def display_results(df, is_dev_mode=False):
     st.write("---")
     st.info("이 검사는 개인의 흥미 유형을 알아보기 위한 간단한 검사이며, 결과는 참고용으로만 활용하시기 바랍니다. 검사자의 태도나 상황에 따라 정확도가 달라질 수 있으므로, 실제 교육과정 선택 시에는 다양한 요소를 함께 고려하시길 권장합니다.")
 
-    # --- 2. 결과 페이지에 추가 정보 섹션 추가 ---
     st.subheader("เพิ่มเติม")
     with st.expander("교과군별 과목 안내"):
         for group, subjects in GROUP_TO_SUBJECTS_MAP.items():
@@ -272,7 +282,6 @@ def display_results(df, is_dev_mode=False):
         st.rerun()
 
 # --- 메인 로직 분기 ---
-# 일반 사용자 플로우
 version = st.radio(
     "**원하는 검사 버전을 선택해주세요.**",
     ('**라이트** (81문항)', '**기본** (115문항)'),

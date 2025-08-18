@@ -239,7 +239,7 @@ def display_results(df, is_dev_mode=False):
 
     # --- 2. 결과 페이지에 추가 정보 섹션 추가 ---
     st.subheader("추가정보")
-    with st.expander("교과군별 과목 안내"):
+    with st.expander("교과군별 과목 유형 안내"):
         for group, subjects in GROUP_TO_SUBJECTS_MAP.items():
             st.markdown(f"**{group}**: {', '.join(subjects)}")
     

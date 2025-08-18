@@ -239,10 +239,9 @@ def display_results(df, is_dev_mode=False):
 
     # --- 2. 결과 페이지에 추가 정보 섹션 추가 ---
   with st.expander("교과군별 과목 안내"):
-
-        for group, subjects in GROUP_TO_SUBJECTS_MAP.items():
-
+  for group, subjects in GROUP_TO_SUBJECTS_MAP.items():
             st.markdown(f"**{group}**: {', '.join(subjects)}")
+
 st.caption("Made by: 서울고등학교 SELECT 프로젝트팀 (김OO, 이OO, 박OO, 최OO, 정OO)")
     
 if st.button("검사 다시하기"):

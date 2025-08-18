@@ -229,7 +229,7 @@ def display_results(df, is_dev_mode=False):
         chart_df = scores_series.reset_index()
         chart_df.columns = ['과목', '평균 점수']
         fig = px.bar(chart_df, x='과목', y='평균 점수', text_auto='.2f')
-        fig.update_xaxes(tickangle=0)
+        fig.update_xaxes(tickangle=90)
         st.plotly_chart(fig, use_container_width=True)
     else:
         st.warning("분석 결과가 없습니다.")

@@ -243,7 +243,7 @@ def display_results(df, is_dev_mode=False):
         for group, subjects in GROUP_TO_SUBJECTS_MAP.items():
             st.markdown(f"**{group}**: {', '.join(subjects)}")
     
-    st.caption("Made by: 서울고등학교 선택과목 유형검사 개발 프로젝트 팀 )")
+    st.caption("Made by: 서울고등학교 선택과목 유형검사 개발 프로젝트 팀")
     
     if st.button("검사 다시하기"):
         st.session_state.clear()

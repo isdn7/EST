@@ -248,14 +248,17 @@ def display_results(df, is_dev_mode=False):
 
     def process_and_display_table(file_path, year_text):
         try:
+            # 헤더 없이 모든 데이터를 읽고, 세 번째 행을 헤더로 설정
             df = pd.read_csv(file_path, header=None)
             df.columns = df.iloc[2].tolist()
-            df = df.iloc[3:].reset_index(drop=True)
             df.columns.name = None
-
-            # '학년' 열 이름을 명시적으로 설정
+            
+            # 첫 번째 열의 이름을 '학년'으로 변경
             df = df.rename(columns={df.columns[0]: '학년'})
-
+            
+            # 헤더로 사용한 행과 불필요한 행들을 제거하고 데이터만 남김
+            df = df.iloc[3:].reset_index(drop=True)
+            
             st.markdown(f"**{year_text}**")
             
             # 교과군별로 그룹화하여 익스팬더로 표시
@@ -265,13 +268,17 @@ def display_results(df, is_dev_mode=False):
                 filtered_df = df[filtered_cols].dropna(how='all')
 
                 if not filtered_df.empty:
-                    # '학년' 열을 기준으로 셀 병합 효과를 내기 위해 스타일링 적용
                     with st.expander(f"{group}"):
-                        styled_df = filtered_df.style.hide(axis="index").set_table_styles([
+                        # '학년' 열의 중복된 값을 숨겨 셀 병합 효과를 내는 스타일링 적용
+                        styled_df = filtered_df.style.apply(
+                            lambda s: ['visibility: hidden' if i > 0 and s.iloc[i] == s.iloc[i-1] else '' for i in range(len(s))],
+                            subset=['학년']
+                        ).hide(axis="index").set_table_styles([
                             {'selector': '', 'props': [('width', '100%')]},
                             {'selector': 'th:first-child', 'props': [('display', 'none')]},
-                            {'selector': '.row-id', 'props': [('display', 'none')]}
-                        ]).applymap(lambda x: 'visibility:hidden' if pd.isna(x) else '', subset=pd.IndexSlice[:, '학년'])
+                            {'selector': '.col_heading', 'props': [('display', 'none')]},
+                            {'selector': '.blank.level0', 'props': [('display', 'none')]}
+                        ]).map(lambda x: '' if pd.isna(x) else x)
 
                         st.dataframe(styled_df)
         except FileNotFoundError:

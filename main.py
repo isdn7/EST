@@ -283,7 +283,9 @@ def display_results(df, is_dev_mode=False):
                 with st.expander(f"{group}"):
                     st.dataframe(filtered_df.style.hide(axis="index"))
     except FileNotFoundError:
-        st.warning("`2024.csv` 파일을 찾을 수 없습니다.")    st.caption("Made by : 서울고등학교 선택과목 유형검사 개발 수업량 유연화 팀 😊")
+        st.warning("`2024.csv` 파일을 찾을 수 없습니다.")    
+        
+        st.caption("Made by : 서울고등학교 선택과목 유형검사 개발 수업량 유연화 팀 😊")
     
     if st.button("검사 다시하기"):
         st.session_state.clear()

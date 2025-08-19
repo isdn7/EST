@@ -249,41 +249,49 @@ def display_results(df, is_dev_mode=False):
     # 2025학년도 입학생부터
     try:
         df_2025 = pd.read_csv('2025.csv', header=1)
-        df_2025 = df_2025.drop(columns='Unnamed: 0')
-        df_2025.columns.name = None
-        
+        # Unnamed 컬럼을 제거하고, 첫 번째 열을 '학년'으로 변경
+        df_2025 = df_2025.drop(columns='Unnamed: 0', errors='ignore')
+        df_2025.columns = df_2025.iloc[0].fillna('')
+        df_2025 = df_2025[1:].reset_index(drop=True)
+
         st.markdown("**2025년 입학생부터**")
         
         # 교과군별로 그룹화하여 익스팬더로 표시
         for group in SECTION_ORDER:
             # 해당 교과군에 속하는 과목 컬럼만 필터링
             group_subjects = GROUP_TO_SUBJECTS_MAP.get(group, [])
-            filtered_df = df_2025[['Unnamed: 1'] + [col for col in df_2025.columns if col in group_subjects]].dropna(how='all')
+            filtered_df = df_2025[[df_2025.columns[0]] + [col for col in df_2025.columns if col in group_subjects]]
             
             if not filtered_df.empty:
                 with st.expander(f"{group}"):
-                    st.dataframe(filtered_df.style.hide(axis="index"))
+                    st.dataframe(filtered_df.style.hide(axis="index").set_table_styles([{'selector': '', 'props': [('width', '100%')]}]))
     except FileNotFoundError:
         st.warning("`2025.csv` 파일을 찾을 수 없습니다.")
+    except Exception as e:
+        st.error(f"2025.csv 파일 처리 중 오류 발생: {e}")
 
     # 2024학년도 입학생까지
     try:
         df_2024 = pd.read_csv('2024.csv', header=1)
-        df_2024 = df_2024.drop(columns='Unnamed: 0')
-        df_2024.columns.name = None
-        
+        # Unnamed 컬럼을 제거하고, 첫 번째 열을 '학년'으로 변경
+        df_2024 = df_2024.drop(columns='Unnamed: 0', errors='ignore')
+        df_2024.columns = df_2024.iloc[0].fillna('')
+        df_2024 = df_2024[1:].reset_index(drop=True)
+
         st.markdown("**2024년 입학생까지**")
         
         # 교과군별로 그룹화하여 익스팬더로 표시
         for group in SECTION_ORDER:
             group_subjects = GROUP_TO_SUBJECTS_MAP.get(group, [])
-            filtered_df = df_2024[['Unnamed: 1'] + [col for col in df_2024.columns if col in group_subjects]].dropna(how='all')
+            filtered_df = df_2024[[df_2024.columns[0]] + [col for col in df_2024.columns if col in group_subjects]]
 
             if not filtered_df.empty:
                 with st.expander(f"{group}"):
-                    st.dataframe(filtered_df.style.hide(axis="index"))
+                    st.dataframe(filtered_df.style.hide(axis="index").set_table_styles([{'selector': '', 'props': [('width', '100%')]}]))
     except FileNotFoundError:
-        st.warning("`2024.csv` 파일을 찾을 수 없습니다.")    
+        st.warning("`2024.csv` 파일을 찾을 수 없습니다.")
+    except Exception as e:
+        st.error(f"2024.csv 파일 처리 중 오류 발생: {e}")  
         
         st.caption("Made by : 서울고등학교 선택과목 유형검사 개발 수업량 유연화 팀 😊")
     

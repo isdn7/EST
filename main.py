@@ -280,7 +280,7 @@ def display_results(df, is_dev_mode=False):
                             {'selector': '.blank.level0', 'props': [('display', 'none')]}
                         ]).map(lambda x: '' if pd.isna(x) else x)
 
-def process_and_display_table(file_path, year_text):
+    def process_and_display_table(file_path, year_text):
         try:
             # 헤더 없이 모든 데이터를 읽고, 세 번째 행을 헤더로 설정
             df = pd.read_csv(file_path, header=None)

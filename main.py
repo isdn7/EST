@@ -303,15 +303,12 @@ def process_and_display_table(file_path, year_text):
 
                 if not filtered_df.empty:
                     with st.expander(f"{group}"):
-                        # '학년' 열의 중복된 값을 숨겨 셀 병합 효과를 내는 스타일링 적용
-                        styled_df = filtered_df.style.applymap(
-                            lambda val: 'visibility: hidden' if pd.notna(val) and df[filtered_df.columns[0]][filtered_df[filtered_df.columns[0]] == val].index[0] != filtered_df[filtered_df.columns[0]].index[0] else '',
-                            subset=['학년']
-                        ).hide(axis="index").set_table_styles([
-                            {'selector': '', 'props': [('width', '100%')]}
-                        ])
+                        st.dataframe(filtered_df.style.hide(axis="index").set_table_styles([
+                            {'selector': '', 'props': [('width', '100%')]},
+                            {'selector': 'th:first-child', 'props': [('display', 'none')]},
+                            {'selector': '.col_heading.level0', 'props': [('display', 'none')]}
+                        ]).map(lambda x: '' if pd.isna(x) else x))
 
-                        st.dataframe(styled_df)
         except FileNotFoundError:
             st.warning(f"`{file_path}` 파일을 찾을 수 없습니다.")
         except Exception as e:

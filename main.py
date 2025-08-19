@@ -243,24 +243,25 @@ def display_results(df, is_dev_mode=False):
         for group, subjects in GROUP_TO_SUBJECTS_MAP.items():
             st.markdown(f"**{group}**: {', '.join(subjects)}")
             
-# 신설: 학년도별 선택과목 목록 표 추가
+# 학년도별 선택과목 목록 표 추가
     st.subheader("학년도별 선택과목 목록")
 
-    # 2025학년도 입학생부터
+    # 2025년 입학생부터
     try:
+        # 파일 로드: 첫 번째 행과 열이 불필요하므로, header=1로 두 번째 행을 헤더로 설정
         df_2025 = pd.read_csv('2025.csv', header=1)
-        # Unnamed 컬럼을 제거하고, 첫 번째 열을 '학년'으로 변경
-        df_2025 = df_2025.drop(columns='Unnamed: 0', errors='ignore')
-        df_2025.columns = df_2025.iloc[0].fillna('')
-        df_2025 = df_2025[1:].reset_index(drop=True)
-
+        # 첫 번째 열의 이름을 '학년'으로 변경
+        df_2025 = df_2025.rename(columns={'Unnamed: 0': '학년'})
+        # '학년' 열에 NaN이 있는 행을 제거
+        df_2025 = df_2025.dropna(subset=['학년'])
+        
         st.markdown("**2025년 입학생부터**")
         
         # 교과군별로 그룹화하여 익스팬더로 표시
         for group in SECTION_ORDER:
-            # 해당 교과군에 속하는 과목 컬럼만 필터링
             group_subjects = GROUP_TO_SUBJECTS_MAP.get(group, [])
-            filtered_df = df_2025[[df_2025.columns[0]] + [col for col in df_2025.columns if col in group_subjects]]
+            filtered_cols = ['학년'] + [col for col in df_2025.columns if col in group_subjects]
+            filtered_df = df_2025[filtered_cols].dropna(how='all')
             
             if not filtered_df.empty:
                 with st.expander(f"{group}"):
@@ -270,20 +271,22 @@ def display_results(df, is_dev_mode=False):
     except Exception as e:
         st.error(f"2025.csv 파일 처리 중 오류 발생: {e}")
 
-    # 2024학년도 입학생까지
+    # 2024년 입학생까지
     try:
+        # 파일 로드: 첫 번째 행과 열이 불필요하므로, header=1로 두 번째 행을 헤더로 설정
         df_2024 = pd.read_csv('2024.csv', header=1)
-        # Unnamed 컬럼을 제거하고, 첫 번째 열을 '학년'으로 변경
-        df_2024 = df_2024.drop(columns='Unnamed: 0', errors='ignore')
-        df_2024.columns = df_2024.iloc[0].fillna('')
-        df_2024 = df_2024[1:].reset_index(drop=True)
+        # 첫 번째 열의 이름을 '학년'으로 변경
+        df_2024 = df_2024.rename(columns={'Unnamed: 0': '학년'})
+        # '학년' 열에 NaN이 있는 행을 제거
+        df_2024 = df_2024.dropna(subset=['학년'])
 
         st.markdown("**2024년 입학생까지**")
         
         # 교과군별로 그룹화하여 익스팬더로 표시
         for group in SECTION_ORDER:
             group_subjects = GROUP_TO_SUBJECTS_MAP.get(group, [])
-            filtered_df = df_2024[[df_2024.columns[0]] + [col for col in df_2024.columns if col in group_subjects]]
+            filtered_cols = ['학년'] + [col for col in df_2024.columns if col in group_subjects]
+            filtered_df = df_2024[filtered_cols].dropna(how='all')
 
             if not filtered_df.empty:
                 with st.expander(f"{group}"):
@@ -291,7 +294,7 @@ def display_results(df, is_dev_mode=False):
     except FileNotFoundError:
         st.warning("`2024.csv` 파일을 찾을 수 없습니다.")
     except Exception as e:
-        st.error(f"2024.csv 파일 처리 중 오류 발생: {e}")  
+        st.error(f"2024.csv 파일 처리 중 오류 발생: {e}")
         
         st.caption("Made by : 서울고등학교 선택과목 유형검사 개발 수업량 유연화 팀 😊")
     

@@ -280,12 +280,42 @@ def display_results(df, is_dev_mode=False):
                             {'selector': '.blank.level0', 'props': [('display', 'none')]}
                         ]).map(lambda x: '' if pd.isna(x) else x)
 
+def process_and_display_table(file_path, year_text):
+        try:
+            # 헤더 없이 모든 데이터를 읽고, 세 번째 행을 헤더로 설정
+            df = pd.read_csv(file_path, header=None)
+            df.columns = df.iloc[2].tolist()
+            df.columns.name = None
+            
+            # 첫 번째 열의 이름을 '학년'으로 변경
+            df = df.rename(columns={df.columns[0]: '학년'})
+            
+            # 헤더로 사용한 행과 불필요한 행들을 제거하고 데이터만 남김
+            df = df.iloc[3:].reset_index(drop=True)
+            
+            st.markdown(f"**{year_text}**")
+            
+            # 교과군별로 그룹화하여 익스팬더로 표시
+            for group in SECTION_ORDER:
+                group_subjects = GROUP_TO_SUBJECTS_MAP.get(group, [])
+                filtered_cols = ['학년'] + [col for col in df.columns if col in group_subjects]
+                filtered_df = df[filtered_cols].dropna(how='all')
+
+                if not filtered_df.empty:
+                    with st.expander(f"{group}"):
+                        # '학년' 열의 중복된 값을 숨겨 셀 병합 효과를 내는 스타일링 적용
+                        styled_df = filtered_df.style.map(
+                            lambda x: 'visibility: hidden' if pd.notna(x) and (pd.Series([x, 'previous']) == pd.Series([x, 'previous']).shift(1)).any() else '',
+                            subset=['학년']
+                        ).hide(axis="index").set_table_styles([
+                            {'selector': '', 'props': [('width', '100%')]}
+                        ])
+
                         st.dataframe(styled_df)
         except FileNotFoundError:
             st.warning(f"`{file_path}` 파일을 찾을 수 없습니다.")
         except Exception as e:
             st.error(f"{file_path} 파일 처리 중 오류 발생: {e}")
-
     # 2025년 입학생부터
     process_and_display_table('2025.csv', "2025년 입학생부터")
 

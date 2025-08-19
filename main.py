@@ -242,7 +242,27 @@ def display_results(df, is_dev_mode=False):
     with st.expander("교과군별 과목 유형 안내"):
         for group, subjects in GROUP_TO_SUBJECTS_MAP.items():
             st.markdown(f"**{group}**: {', '.join(subjects)}")
-    
+            
+# 신설: 학년도별 선택과목 목록 표 추가
+    st.subheader("학년도별 선택과목 목록")
+
+    # 2025학년도 이후 파일 로드
+    try:
+        df_2025 = pd.read_csv('2025.csv')
+        df_2025 = df_2025.iloc[1:, 1:] # 첫 번째 행과 열 제거
+        st.markdown("**2025학년도 입학 이후**")
+        st.dataframe(df_2025)
+    except FileNotFoundError:
+        st.warning("`2025.csv` 파일을 찾을 수 없습니다.")
+
+    # 2024학년도 이전 파일 로드
+    try:
+        df_2024 = pd.read_csv('2024.csv')
+        df_2024 = df_2024.iloc[1:, 1:] # 첫 번째 행과 열 제거
+        st.markdown("**2024학년도 입학 이전**")
+        st.dataframe(df_2024)
+    except FileNotFoundError:
+        st.warning("`2024.csv` 파일을 찾을 수 없습니다.")    
     st.caption("Made by : 서울고등학교 선택과목 유형검사 개발 수업량 유연화 팀 😊")
     
     if st.button("검사 다시하기"):

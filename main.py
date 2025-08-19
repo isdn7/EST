@@ -81,8 +81,8 @@ with st.sidebar:
 # UI 시작
 with st.container():
     try:
-advice_df = pd.read_csv('advice_data.csv', header=None).sample(frac=1).reset_index(drop=True)
-advice_list = advice_df[0].dropna().tolist()
+        advice_df = pd.read_csv('advice_data.csv', header=None).sample(frac=1).reset_index(drop=True)
+        advice_list = advice_df[0].dropna().tolist()
         marquee_content = " ★★★ ".join(advice_list)
         marquee_speed_seconds = 240
         st.markdown(

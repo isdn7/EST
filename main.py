@@ -112,7 +112,7 @@ with st.container():
     except Exception:
         pass
 
-st.title("📚 SELECT: 선택과목 유형검사")
+st.title("📚 서울고등학교 선택과목 유형검사")
 
 def display_survey(df):
     version = st.session_state.get('version')

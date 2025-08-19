@@ -285,7 +285,7 @@ def display_results(df, is_dev_mode=False):
     # 2024년 입학생까지
     process_and_display_table('2024.csv', "2024년 입학생까지")
         
-        st.caption("Made by : 서울고등학교 선택과목 유형검사 개발 수업량 유연화 팀 😊")
+    st.caption("Made by : 서울고등학교 선택과목 유형검사 개발 수업량 유연화 팀 😊")
     
     if st.button("검사 다시하기"):
         st.session_state.clear()

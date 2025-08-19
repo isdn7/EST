@@ -246,24 +246,44 @@ def display_results(df, is_dev_mode=False):
 # 신설: 학년도별 선택과목 목록 표 추가
     st.subheader("학년도별 선택과목 목록")
 
-    # 2025학년도 이후 파일 로드
+    # 2025학년도 입학생부터
     try:
-        df_2025 = pd.read_csv('2025.csv')
-        df_2025 = df_2025.iloc[1:, 1:] # 첫 번째 행과 열 제거
-        st.markdown("**2025학년도 입학 이후**")
-        st.dataframe(df_2025)
+        df_2025 = pd.read_csv('2025.csv', header=1)
+        df_2025 = df_2025.drop(columns='Unnamed: 0')
+        df_2025.columns.name = None
+        
+        st.markdown("**2025년 입학생부터**")
+        
+        # 교과군별로 그룹화하여 익스팬더로 표시
+        for group in SECTION_ORDER:
+            # 해당 교과군에 속하는 과목 컬럼만 필터링
+            group_subjects = GROUP_TO_SUBJECTS_MAP.get(group, [])
+            filtered_df = df_2025[['Unnamed: 1'] + [col for col in df_2025.columns if col in group_subjects]].dropna(how='all')
+            
+            if not filtered_df.empty:
+                with st.expander(f"{group}"):
+                    st.dataframe(filtered_df.style.hide(axis="index"))
     except FileNotFoundError:
         st.warning("`2025.csv` 파일을 찾을 수 없습니다.")
 
-    # 2024학년도 이전 파일 로드
+    # 2024학년도 입학생까지
     try:
-        df_2024 = pd.read_csv('2024.csv')
-        df_2024 = df_2024.iloc[1:, 1:] # 첫 번째 행과 열 제거
-        st.markdown("**2024학년도 입학 이전**")
-        st.dataframe(df_2024)
+        df_2024 = pd.read_csv('2024.csv', header=1)
+        df_2024 = df_2024.drop(columns='Unnamed: 0')
+        df_2024.columns.name = None
+        
+        st.markdown("**2024년 입학생까지**")
+        
+        # 교과군별로 그룹화하여 익스팬더로 표시
+        for group in SECTION_ORDER:
+            group_subjects = GROUP_TO_SUBJECTS_MAP.get(group, [])
+            filtered_df = df_2024[['Unnamed: 1'] + [col for col in df_2024.columns if col in group_subjects]].dropna(how='all')
+
+            if not filtered_df.empty:
+                with st.expander(f"{group}"):
+                    st.dataframe(filtered_df.style.hide(axis="index"))
     except FileNotFoundError:
-        st.warning("`2024.csv` 파일을 찾을 수 없습니다.")    
-    st.caption("Made by : 서울고등학교 선택과목 유형검사 개발 수업량 유연화 팀 😊")
+        st.warning("`2024.csv` 파일을 찾을 수 없습니다.")    st.caption("Made by : 서울고등학교 선택과목 유형검사 개발 수업량 유연화 팀 😊")
     
     if st.button("검사 다시하기"):
         st.session_state.clear()

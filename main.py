@@ -280,7 +280,7 @@ def display_results(df, is_dev_mode=False):
                             {'selector': '.blank.level0', 'props': [('display', 'none')]}
                         ]).map(lambda x: '' if pd.isna(x) else x)
 
-    def process_and_display_table(file_path, year_text):
+def process_and_display_table(file_path, year_text):
         try:
             # 헤더 없이 모든 데이터를 읽고, 세 번째 행을 헤더로 설정
             df = pd.read_csv(file_path, header=None)
@@ -304,8 +304,8 @@ def display_results(df, is_dev_mode=False):
                 if not filtered_df.empty:
                     with st.expander(f"{group}"):
                         # '학년' 열의 중복된 값을 숨겨 셀 병합 효과를 내는 스타일링 적용
-                        styled_df = filtered_df.style.map(
-                            lambda x: 'visibility: hidden' if pd.notna(x) and (pd.Series([x, 'previous']) == pd.Series([x, 'previous']).shift(1)).any() else '',
+                        styled_df = filtered_df.style.applymap(
+                            lambda val: 'visibility: hidden' if pd.notna(val) and df[filtered_df.columns[0]][filtered_df[filtered_df.columns[0]] == val].index[0] != filtered_df[filtered_df.columns[0]].index[0] else '',
                             subset=['학년']
                         ).hide(axis="index").set_table_styles([
                             {'selector': '', 'props': [('width', '100%')]}

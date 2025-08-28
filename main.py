@@ -54,30 +54,30 @@ if 'dev_authenticated' not in st.session_state:
 if 'show_dev_results' not in st.session_state:
     st.session_state.show_dev_results = False
 
-# 사이드바 개발자 모드
-with st.sidebar:
-    st.header("개발자용")
-    if st.session_state.dev_authenticated:
-        st.success("인증 성공")
-        if st.button("결과 페이지 바로보기 (기본 버전)"):
-            st.session_state.show_dev_results = True
-            st.rerun()
-        if st.button("로그아웃"):
-            st.session_state.dev_authenticated = False
-            st.session_state.show_dev_results = False
-            st.rerun()
-    else:
-        if st.query_params.get("dev") == "true":
-            with st.form("login_form"):
-                password = st.text_input("비밀번호", type="password")
-                submitted = st.form_submit_button("로그인")
-                if submitted:
-                    if "passwords" in st.secrets and password == st.secrets.passwords.dev_mode_password:
-                        st.session_state.dev_authenticated = True
-                        st.rerun()
-                    else:
-                        st.error("비밀번호가 틀렸습니다.")
+# 개발자 모드 기능
+if 'dev_authenticated' not in st.session_state:
+    st.session_state.dev_authenticated = False
+if 'show_dev_results' not in st.session_state:
+    st.session_state.show_dev_results = False
 
+# URL 파라미터로 개발자 모드 활성화
+if st.query_params.get("dev") == "true":
+    password = st.text_input("개발자 모드 비밀번호를 입력하세요", type="password")
+    if password:
+        if "passwords" in st.secrets and password == st.secrets.passwords.dev_mode_password:
+            st.session_state.dev_authenticated = True
+            st.success("인증 성공! 결과 페이지를 바로 볼 수 있습니다.")
+        else:
+            st.error("비밀번호가 틀렸습니다.")
+
+if st.session_state.dev_authenticated:
+    if st.button("결과 페이지 바로보기 (기본 버전)"):
+        st.session_state.show_dev_results = True
+        st.rerun()
+    if st.button("로그아웃"):
+        st.session_state.dev_authenticated = False
+        st.session_state.show_dev_results = False
+        st.rerun()
 # UI 시작
 with st.container():
     try:
